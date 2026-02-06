@@ -1,0 +1,26 @@
+[
+  {
+    "e164": "+14155550100",
+    "label": "Sample: IRS impersonation scam",
+    "source": "phoneint_sample_dataset",
+    "reference_url": "scamdb://phoneint_sample_dataset/irs-impersonation",
+    "last_seen": "2024-01-01",
+    "notes": "Example entry for tests and demos. Replace with your own lawful dataset."
+  },
+  {
+    "e164": "+14155550123",
+    "label": "Sample: Tech support scam",
+    "source": "phoneint_sample_dataset",
+    "reference_url": "scamdb://phoneint_sample_dataset/tech-support",
+    "last_seen": "2024-02-15",
+    "notes": "Example entry for tests and demos. Replace with your own lawful dataset."
+  },
+  {
+    "e164": "+442083661177",
+    "label": "Sample: Delivery fee scam",
+    "source": "phoneint_sample_dataset",
+    "reference_url": "scamdb://phoneint_sample_dataset/delivery-fee",
+    "last_seen": "2024-03-10",
+    "notes": "Example entry for tests and demos. Replace with your own lawful dataset."
+  }
+]
