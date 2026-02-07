@@ -30,6 +30,7 @@ from pydantic import ConfigDict as PydanticConfigDict
 from phoneint.net.http import HttpClientConfig
 from phoneint.owner.signals import default_owner_confidence_weights
 from phoneint.reputation.score import default_score_weights
+from phoneint.reputation.signals import DEFAULT_SIGNAL_OVERRIDES_PATH
 
 
 class PhoneintSettings(BaseModel):
@@ -65,6 +66,7 @@ class PhoneintSettings(BaseModel):
     owner_confidence_weights: dict[str, float] = Field(
         default_factory=default_owner_confidence_weights
     )
+    signal_overrides_path: Path = DEFAULT_SIGNAL_OVERRIDES_PATH
 
     def http_config(self) -> HttpClientConfig:
         return HttpClientConfig(
@@ -99,6 +101,7 @@ _ENV_MAP: dict[str, str] = {
     "PHONEINT_SCORE_WEIGHTS": "score_weights",
     # JSON string: {"pii_confirmed": 50, "business_listing": 15, ...}
     "PHONEINT_OWNER_CONFIDENCE_WEIGHTS": "owner_confidence_weights",
+    "PHONEINT_SIGNAL_OVERRIDES_PATH": "signal_overrides_path",
 }
 
 

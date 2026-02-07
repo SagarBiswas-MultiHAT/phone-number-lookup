@@ -29,6 +29,7 @@ from phoneint.reputation.duckduckgo import DuckDuckGoInstantAnswerAdapter
 from phoneint.reputation.google import GoogleCustomSearchAdapter
 from phoneint.reputation.public import PublicScamListAdapter
 from phoneint.reputation.score import infer_domain_signals, score_risk
+from phoneint.reputation.signals import apply_signal_overrides, load_signal_overrides
 
 logger = logging.getLogger(__name__)
 
@@ -84,6 +85,7 @@ def run_gui(settings: PhoneintSettings) -> None:
         def __init__(self, settings: PhoneintSettings) -> None:
             super().__init__()
             self._settings = settings
+            self._signal_overrides = load_signal_overrides(self._settings.signal_overrides_path)
             self._tasks: set[asyncio.Task[Any]] = set()
             self._last_report: dict[str, Any] | None = None
             self._initial_geometry = None
@@ -442,7 +444,12 @@ def run_gui(settings: PhoneintSettings) -> None:
             # Score once all evidence is in.
             found_in_scam_db = any(r.source == "public_scam_db" for r in evidence)
             domain_signals = infer_domain_signals(evidence)
-            voip = enrichment.number_type == "voip"
+            voip, domain_signals, override_hits = apply_signal_overrides(
+                e164=normalized.e164,
+                number_type=enrichment.number_type,
+                domain_signals=domain_signals,
+                overrides=self._signal_overrides,
+            )
             score = score_risk(
                 found_in_scam_db=found_in_scam_db,
                 voip=voip,
@@ -465,14 +472,23 @@ def run_gui(settings: PhoneintSettings) -> None:
             self.results_text.append(
                 f"- found_in_classifieds: {domain_signals.get('found_in_classifieds')}")
             self.results_text.append(
-                f"- business_listing: {domain_signals.get('business_listing')}")
-            self.results_text.append(f"Evidence items: {len(evidence)}")
+                f"- business_listing: {domain_signals.get('business_listing')}"
+            )
 
             if adapter_errors:
                 self.results_text.append("")
                 self.results_text.append("Adapter errors:")
                 for name, msg in adapter_errors.items():
                     self.results_text.append(f"- {name}: {msg}")
+
+            triggered_overrides = [name for name, fired in override_hits.items() if fired]
+            if triggered_overrides:
+                self.results_text.append("")
+                self.results_text.append("Signal overrides:")
+                for name in triggered_overrides:
+                    self.results_text.append(f"- {name}")
+
+            self.results_text.append(f"Evidence items: {len(evidence)}")
 
             report: dict[str, Any] = {
                 "metadata": {
@@ -508,6 +524,7 @@ def run_gui(settings: PhoneintSettings) -> None:
                     "voip": voip,
                     **domain_signals,
                 },
+                "signal_overrides": override_hits,
                 "score": score.to_dict(),
                 "summary": {
                     "executive_summary": (

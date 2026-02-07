@@ -31,6 +31,7 @@ from phoneint.reputation.duckduckgo import DuckDuckGoInstantAnswerAdapter
 from phoneint.reputation.google import GoogleCustomSearchAdapter
 from phoneint.reputation.public import PublicScamListAdapter
 from phoneint.reputation.score import infer_domain_signals, score_risk
+from phoneint.reputation.signals import apply_signal_overrides, load_signal_overrides
 
 logger = logging.getLogger(__name__)
 
@@ -81,6 +82,7 @@ async def lookup_async(
         number, default_region=region or settings.default_region
     )
     enrichment = enrich_number(parsed)
+    signal_overrides = load_signal_overrides(settings.signal_overrides_path)
 
     http_config = settings.http_config()
     rate_limiter = PerHostRateLimiter(rate_per_second=http_config.rate_limit_per_host_per_second)
@@ -126,7 +128,12 @@ async def lookup_async(
 
     found_in_scam_db = any(r.source == "public_scam_db" for r in evidence)
     domain_signals = infer_domain_signals(evidence)
-    voip = enrichment.number_type == "voip"
+    voip, domain_signals, override_hits = apply_signal_overrides(
+        e164=normalized.e164,
+        number_type=enrichment.number_type,
+        domain_signals=domain_signals,
+        overrides=signal_overrides,
+    )
 
     score = score_risk(
         found_in_scam_db=found_in_scam_db,
@@ -174,6 +181,7 @@ async def lookup_async(
             "voip": voip,
             **domain_signals,
         },
+        "signal_overrides": override_hits,
         "score": score.to_dict(),
         "summary": {
             "executive_summary": exec_summary,
@@ -214,6 +222,15 @@ def _human_text(report: dict[str, Any]) -> str:
     lines.append("Risk score:")
     lines.append(f"  Score: {s.get('score', '')}/100")
     lines.append("")
+
+    overrides = report.get("signal_overrides", {})
+    if isinstance(overrides, dict):
+        triggered = [name for name, fired in overrides.items() if fired]
+        if triggered:
+            lines.append("Signal overrides:")
+            for name in triggered:
+                lines.append(f"  - {name}")
+            lines.append("")
 
     adapter_errors = (report.get("reputation", {}) or {}).get("adapter_errors", {})
     if isinstance(adapter_errors, dict) and adapter_errors:
