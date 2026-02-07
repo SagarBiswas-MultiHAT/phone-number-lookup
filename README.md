@@ -7,6 +7,11 @@
 **This tool is for lawful, ethical OSINT research only.**
 Do not use it to harass, stalk, dox, or violate privacy. Always comply with applicable laws and third-party Terms of Service.
 
+
+!()[https://imgur.com/XCNwZsf.png]
+!()[https://imgur.com/uHusxTO.png]
+
+
 ## Table of Contents
 
 - What This Tool Does
@@ -162,6 +167,8 @@ Example:
   "business_listing": ["+18005550100"]
 }
 ```
+
+When an override fires, a synthetic evidence item with `source: signal_override` is appended to the report so the Evidence list (CLI/GUI/CSV) records why the signal changed even if no adapter returned data.
 
 You can also set a custom path via `PHONEINT_SIGNAL_OVERRIDES_PATH`.
 

@@ -3,7 +3,12 @@ from __future__ import annotations
 from pathlib import Path
 import json
 
-from phoneint.reputation.signals import SIGNAL_NAMES, apply_signal_overrides, load_signal_overrides
+from phoneint.reputation.signals import (
+    SIGNAL_NAMES,
+    apply_signal_overrides,
+    generate_signal_override_evidence,
+    load_signal_overrides,
+)
 
 
 def test_load_signal_overrides_missing(tmp_path: Path) -> None:
@@ -47,3 +52,16 @@ def test_apply_signal_overrides_forces_flags() -> None:
     assert hits["voip"] is True
     assert hits["found_in_classifieds"] is True
     assert hits["business_listing"] is False
+
+
+def test_generate_signal_override_evidence_entries() -> None:
+    hits = {
+        "voip": True,
+        "found_in_classifieds": False,
+        "business_listing": True,
+    }
+    entries = generate_signal_override_evidence("+14155552671", hits)
+    assert len(entries) == 2
+    assert entries[0].source == "signal_override"
+    assert "Signal override" in entries[0].title
+    assert entries[1].source == "signal_override"

@@ -31,7 +31,11 @@ from phoneint.reputation.duckduckgo import DuckDuckGoInstantAnswerAdapter
 from phoneint.reputation.google import GoogleCustomSearchAdapter
 from phoneint.reputation.public import PublicScamListAdapter
 from phoneint.reputation.score import infer_domain_signals, score_risk
-from phoneint.reputation.signals import apply_signal_overrides, load_signal_overrides
+from phoneint.reputation.signals import (
+    apply_signal_overrides,
+    generate_signal_override_evidence,
+    load_signal_overrides,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -134,6 +138,9 @@ async def lookup_async(
         domain_signals=domain_signals,
         overrides=signal_overrides,
     )
+    override_evidence = generate_signal_override_evidence(normalized.e164, override_hits)
+    if override_evidence:
+        evidence.extend(override_evidence)
 
     score = score_risk(
         found_in_scam_db=found_in_scam_db,

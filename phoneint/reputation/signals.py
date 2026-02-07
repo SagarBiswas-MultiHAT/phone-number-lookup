@@ -3,6 +3,8 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+from phoneint.reputation.adapter import SearchResult, now_utc
+
 SIGNAL_NAMES = (
     "voip",
     "found_in_classifieds",
@@ -10,6 +12,12 @@ SIGNAL_NAMES = (
 )
 
 DEFAULT_SIGNAL_OVERRIDES_PATH = Path("phoneint/data/signal_overrides.json")
+
+SIGNAL_DISPLAY_NAMES = {
+    "voip": "VoIP signal",
+    "found_in_classifieds": "classifieds mention",
+    "business_listing": "business directory mention",
+}
 
 
 def _normalize_number(value: str) -> str:
@@ -65,3 +73,25 @@ def apply_signal_overrides(
             hits[name] = True
 
     return voip_signal, merged, hits
+
+
+def generate_signal_override_evidence(
+    e164: str, hits: dict[str, bool]
+) -> list[SearchResult]:
+    """Return synthetic evidence entries for any fired signal overrides."""
+
+    entries: list[SearchResult] = []
+    for name in SIGNAL_NAMES:
+        if not hits.get(name):
+            continue
+        label = SIGNAL_DISPLAY_NAMES.get(name, name)
+        entries.append(
+            SearchResult(
+                title=f"Signal override: {label}",
+                url="",
+                snippet=f"Configured override flagged the {label} for {e164}.",
+                timestamp=now_utc(),
+                source="signal_override",
+            )
+        )
+    return entries
