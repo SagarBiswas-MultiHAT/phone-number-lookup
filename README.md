@@ -8,8 +8,8 @@
 Do not use it to harass, stalk, dox, or violate privacy. Always comply with applicable laws and third-party Terms of Service.
 
 
-!()[https://imgur.com/XCNwZsf.png]
-!()[https://imgur.com/uHusxTO.png]
+![](https://imgur.com/XCNwZsf.png)
+![](https://imgur.com/uHusxTO.png)
 
 
 ## Table of Contents

@@ -67,9 +67,7 @@ def _iter_evidence_rows(report: Mapping[str, Any]) -> Iterable[dict[str, str]]:
     return rows
 
 
-def _iter_kv_rows(
-    section: str, data: Mapping[str, Any] | None
-) -> Iterable[dict[str, str]]:
+def _iter_kv_rows(section: str, data: Mapping[str, Any] | None) -> Iterable[dict[str, str]]:
     if not isinstance(data, dict):
         return []
     rows: list[dict[str, str]] = []

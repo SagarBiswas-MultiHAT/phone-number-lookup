@@ -110,17 +110,15 @@ def _iter_owner_audit_rows(report: Mapping[str, Any]) -> Iterable[dict[str, str]
                 "adapter": _safe_str(item.get("adapter")),
                 "result": _safe_str(item.get("result")),
                 "caller": _safe_str(item.get("caller")),
-                "legal_basis": json.dumps(legal_basis, ensure_ascii=True)
-                if legal_basis is not None
-                else "",
+                "legal_basis": (
+                    json.dumps(legal_basis, ensure_ascii=True) if legal_basis is not None else ""
+                ),
             }
         )
     return rows
 
 
-def _iter_kv_rows(
-    section: str, data: Mapping[str, Any] | None
-) -> Iterable[dict[str, str]]:
+def _iter_kv_rows(section: str, data: Mapping[str, Any] | None) -> Iterable[dict[str, str]]:
     if not isinstance(data, dict):
         return []
     rows: list[dict[str, str]] = []
