@@ -28,6 +28,7 @@ from pydantic import BaseModel, Field
 from pydantic import ConfigDict as PydanticConfigDict
 
 from phoneint.net.http import HttpClientConfig
+from phoneint.owner.signals import default_owner_confidence_weights
 from phoneint.reputation.score import default_score_weights
 
 
@@ -56,9 +57,14 @@ class PhoneintSettings(BaseModel):
     gcs_api_key: str | None = Field(default=None)
     gcs_cx: str | None = Field(default=None)
     scam_list_path: Path | None = None
+    enable_truecaller: bool = False
+    truecaller_api_key: str | None = None
 
     # Scoring
     score_weights: dict[str, float] = Field(default_factory=default_score_weights)
+    owner_confidence_weights: dict[str, float] = Field(
+        default_factory=default_owner_confidence_weights
+    )
 
     def http_config(self) -> HttpClientConfig:
         return HttpClientConfig(
@@ -87,8 +93,12 @@ _ENV_MAP: dict[str, str] = {
     "PHONEINT_CACHE_PATH": "cache_path",
     "PHONEINT_CACHE_TTL_SECONDS": "cache_ttl_seconds",
     "PHONEINT_SCAM_LIST_PATH": "scam_list_path",
+    "ENABLE_TRUECALLER": "enable_truecaller",
+    "TRUECALLER_API_KEY": "truecaller_api_key",
     # JSON string: {"found_in_scam_db": 70, "voip": 10, ...}
     "PHONEINT_SCORE_WEIGHTS": "score_weights",
+    # JSON string: {"pii_confirmed": 50, "business_listing": 15, ...}
+    "PHONEINT_OWNER_CONFIDENCE_WEIGHTS": "owner_confidence_weights",
 }
 
 

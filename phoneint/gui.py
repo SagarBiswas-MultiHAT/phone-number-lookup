@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+from pathlib import Path
 from typing import Any
 
 from phoneint.cache import CachedReputationAdapter, SQLiteTTLCache
@@ -34,10 +35,12 @@ logger = logging.getLogger(__name__)
 
 def run_gui(settings: PhoneintSettings) -> None:
     try:
-        from PySide6.QtCore import Qt
+        from PySide6.QtCore import QEvent, QTimer
+        from PySide6.QtGui import QGuiApplication
         from PySide6.QtWidgets import (
             QApplication,
             QCheckBox,
+            QComboBox,
             QGridLayout,
             QGroupBox,
             QHBoxLayout,
@@ -45,8 +48,10 @@ def run_gui(settings: PhoneintSettings) -> None:
             QLineEdit,
             QListWidget,
             QMessageBox,
+            QFileDialog,
             QPushButton,
             QProgressBar,
+            QTabWidget,
             QTextEdit,
             QVBoxLayout,
             QWidget,
@@ -57,11 +62,32 @@ def run_gui(settings: PhoneintSettings) -> None:
             "GUI dependencies not installed. Install with `pip install 'phoneint[gui]'`."
         ) from exc
 
-    class MainWindow(QWidget):  # type: ignore[misc]
+    import getpass
+
+    from phoneint import __version__
+    from phoneint.gui_owner import create_owner_intel_panel
+    from phoneint.io.report import utc_now_iso
+    from phoneint.io.report_owner import export_csv as export_csv_owner
+    from phoneint.io.report_owner import export_json as export_json_owner
+    from phoneint.io.report_owner import generate_pdf as generate_pdf_owner
+    from phoneint.owner.classify import classify as classify_owner
+    from phoneint.owner.interface import LegalBasis
+    from phoneint.owner.signals import (
+        associations_from_evidence,
+        extract_owner_signals,
+        score_owner_confidence,
+    )
+    from phoneint.owner.signals import OwnerIntelEngine
+    from phoneint.owner.truecaller_adapter import TruecallerAdapter
+
+    class MainWindow(QWidget):
         def __init__(self, settings: PhoneintSettings) -> None:
             super().__init__()
             self._settings = settings
-            self._tasks: set[asyncio.Task[tuple[str, list[SearchResult]]]] = set()
+            self._tasks: set[asyncio.Task[Any]] = set()
+            self._last_report: dict[str, Any] | None = None
+            self._initial_geometry = None
+            self._was_maximized = False
 
             self.setWindowTitle("phoneint (Phone Number OSINT)")
 
@@ -107,6 +133,17 @@ def run_gui(settings: PhoneintSettings) -> None:
             buttons.addWidget(self.cancel_btn)
             root.addLayout(buttons)
 
+            download_row = QHBoxLayout()
+            download_row.addWidget(QLabel("Download report"))
+            self.report_format = QComboBox()
+            self.report_format.addItems(["json", "csv", "pdf"])
+            download_row.addWidget(self.report_format)
+            self.download_btn = QPushButton("Save")
+            self.download_btn.setEnabled(False)
+            download_row.addWidget(self.download_btn)
+            download_row.addStretch(1)
+            root.addLayout(download_row)
+
             self.progress = QProgressBar()
             self.progress.setRange(0, 1)
             self.progress.setValue(0)
@@ -119,14 +156,51 @@ def run_gui(settings: PhoneintSettings) -> None:
             self.results_text = QTextEdit()
             self.results_text.setReadOnly(True)
             panels.addWidget(self.results_text, 2)
+
+            # Right side: tabs for evidence and owner intelligence.
+            tabs = QTabWidget()
+
             self.evidence_list = QListWidget()
-            panels.addWidget(self.evidence_list, 1)
+            tabs.addTab(self.evidence_list, "Evidence")
+
+            pii_capable_available = bool(
+                self._settings.enable_truecaller and self._settings.truecaller_api_key
+            )
+            self.owner_panel = create_owner_intel_panel(pii_capable_available=pii_capable_available)
+            tabs.addTab(self.owner_panel, "Owner Intelligence")
+
+            panels.addWidget(tabs, 1)
             root.addLayout(panels)
 
             self.setLayout(root)
 
             self.lookup_btn.clicked.connect(self.on_lookup)
             self.cancel_btn.clicked.connect(self.on_cancel)
+            self.download_btn.clicked.connect(self.on_download_report)
+
+            QTimer.singleShot(0, self._initialize_geometry)
+
+        def _initialize_geometry(self) -> None:
+            self._center_on_screen()
+            self._initial_geometry = self.geometry()
+
+        def _center_on_screen(self) -> None:
+            screen = QGuiApplication.primaryScreen()
+            if screen is None:
+                return
+            geo = screen.availableGeometry()
+            frame = self.frameGeometry()
+            frame.moveCenter(geo.center())
+            self.move(frame.topLeft())
+
+        def changeEvent(self, event: QEvent) -> None:
+            if event.type() == QEvent.Type.WindowStateChange:
+                is_max = bool(self.windowState() & Qt.WindowState.WindowMaximized)
+                if self._was_maximized and not is_max and self._initial_geometry is not None:
+                    self.setGeometry(self._initial_geometry)
+                    self._center_on_screen()
+                self._was_maximized = is_max
+            super().changeEvent(event)
 
         def _set_busy(self, busy: bool) -> None:
             self.lookup_btn.setEnabled(not busy)
@@ -142,6 +216,9 @@ def run_gui(settings: PhoneintSettings) -> None:
             self._tasks.clear()
             self.evidence_list.clear()
             self.results_text.clear()
+            self.owner_panel.reset()
+            self._last_report = None
+            self.download_btn.setEnabled(False)
 
             number = self.number_input.text().strip()
             region = self.region_input.text().strip().upper() or None
@@ -172,11 +249,15 @@ def run_gui(settings: PhoneintSettings) -> None:
             self.results_text.append(f"E.164: {normalized.e164}")
             self.results_text.append(f"International: {normalized.international}")
             self.results_text.append(f"National: {normalized.national}")
+            self.results_text.append(f"Region (ISO): {normalized.region}")
+            self.results_text.append(f"Country code: {normalized.country_code}")
             self.results_text.append("")
             self.results_text.append(f"Carrier: {enrichment.carrier}")
             self.results_text.append(f"Region: {enrichment.region_name}")
             self.results_text.append(f"Time zones: {', '.join(enrichment.time_zones)}")
             self.results_text.append(f"Type: {enrichment.number_type}")
+            self.results_text.append(f"ISO country code: {enrichment.iso_country_code}")
+            self.results_text.append(f"Dialing prefix: {enrichment.dialing_prefix}")
             self.results_text.append("")
 
             http_config = self._settings.http_config()
@@ -227,6 +308,9 @@ def run_gui(settings: PhoneintSettings) -> None:
                 self.progress.setValue(0)
 
                 evidence: list[SearchResult] = []
+                owner_audit: list[dict[str, Any]] = []
+                owner_intel_final: dict[str, Any] | None = None
+                adapter_errors: dict[str, str] = {}
                 completed = 0
 
                 async def run_one(adapter: ReputationAdapter) -> tuple[str, list[SearchResult]]:
@@ -242,7 +326,18 @@ def run_gui(settings: PhoneintSettings) -> None:
                 self.status.setText("Running adapters...")
                 try:
                     for fut in asyncio.as_completed(task_map.keys()):
-                        name, results = await fut
+                        name = task_map.get(fut, "unknown")
+                        try:
+                            name, results = await fut
+                        except Exception as exc:
+                            adapter_errors[name] = f"{type(exc).__name__}: {exc}"
+                            completed += 1
+                            self.progress.setValue(completed)
+                            self.status.setText(
+                                f"Adapter failed: {name} ({completed}/{len(adapters)})"
+                            )
+                            continue
+
                         completed += 1
                         self.progress.setValue(completed)
                         self.status.setText(
@@ -251,11 +346,98 @@ def run_gui(settings: PhoneintSettings) -> None:
                         for r in results:
                             evidence.append(r)
                             self.evidence_list.addItem(f"[{r.source}] {r.title}")
+
+                        # Live-update owner intelligence based on public evidence so far.
+                        voip_flag = enrichment.number_type == "voip"
+                        associations = associations_from_evidence(evidence)
+                        ownership_type = classify_owner(
+                            parsed, associations, voip_flag=voip_flag, pii=None
+                        )
+                        signals = extract_owner_signals(
+                            evidence=evidence,
+                            associations=associations,
+                            voip_flag=voip_flag,
+                            pii_present=False,
+                        )
+                        confidence = score_owner_confidence(
+                            ownership_type,
+                            signals,
+                            weights=self._settings.owner_confidence_weights,
+                        )
+                        owner_intel_public: dict[str, Any] = {
+                            "ownership_type": ownership_type,
+                            "associations": [a.to_dict() for a in associations],
+                            "signals": signals.to_dict(),
+                            "confidence_score": confidence.score,
+                            "confidence_breakdown": [b.to_dict() for b in confidence.breakdown],
+                            "pii_allowed": False,
+                        }
+                        self.owner_panel.set_owner_intel(owner_intel_public, [])
                 except asyncio.CancelledError:
                     self.status.setText("Cancelled.")
                     return
                 finally:
                     self._tasks.clear()
+
+                # Optional: run PII-capable owner adapter (gated by config + explicit consent).
+                allow_pii = bool(self.owner_panel.consent_obtained())
+                purpose = self.owner_panel.legal_purpose()
+                if allow_pii and not purpose:
+                    QMessageBox.warning(
+                        self,
+                        "Purpose required",
+                        "Please enter a purpose before enabling PII-capable identity lookups.",
+                    )
+                    allow_pii = False
+
+                if (
+                    allow_pii
+                    and self._settings.enable_truecaller
+                    and self._settings.truecaller_api_key
+                ):
+                    legal_basis: LegalBasis = {"purpose": purpose, "consent_obtained": True}
+                    caller = getpass.getuser()
+                    try:
+                        tc = TruecallerAdapter(
+                            client=client,
+                            http_config=http_config,
+                            enabled=True,
+                            api_key=self._settings.truecaller_api_key,
+                            rate_limiter=rate_limiter,
+                        )
+                        engine = OwnerIntelEngine(
+                            adapters=[tc], weights=self._settings.owner_confidence_weights
+                        )
+
+                        pii_task: asyncio.Task[Any] = asyncio.create_task(
+                            engine.build(
+                                normalized.e164,
+                                parsed_number=parsed,
+                                evidence=evidence,
+                                voip_flag=enrichment.number_type == "voip",
+                                allow_pii=True,
+                                legal_basis=legal_basis,
+                                caller=caller,
+                            )
+                        )
+                        self._tasks.add(pii_task)
+                        owner_result, audit_records = await pii_task
+                        owner_intel_final = owner_result.to_dict()
+                        owner_audit = [a.to_dict() for a in audit_records]
+                    except PermissionError as exc:
+                        QMessageBox.warning(self, "Consent required", str(exc))
+                    except asyncio.CancelledError:
+                        self.status.setText("Cancelled.")
+                        return
+                    except Exception as exc:
+                        QMessageBox.warning(
+                            self, "Owner adapter error", f"{type(exc).__name__}: {exc}"
+                        )
+                    finally:
+                        self._tasks.clear()
+
+                if owner_intel_final is not None:
+                    self.owner_panel.set_owner_intel(owner_intel_final, owner_audit)
 
             # Score once all evidence is in.
             found_in_scam_db = any(r.source == "public_scam_db" for r in evidence)
@@ -276,12 +458,113 @@ def run_gui(settings: PhoneintSettings) -> None:
             for b in score.breakdown:
                 self.results_text.append(f"- {b.name}: {b.contribution:.1f} ({b.reason})")
 
+            self.results_text.append("")
+            self.results_text.append("Signals:")
+            self.results_text.append(f"- found_in_scam_db: {found_in_scam_db}")
+            self.results_text.append(f"- voip: {voip}")
+            self.results_text.append(
+                f"- found_in_classifieds: {domain_signals.get('found_in_classifieds')}")
+            self.results_text.append(
+                f"- business_listing: {domain_signals.get('business_listing')}")
+            self.results_text.append(f"Evidence items: {len(evidence)}")
+
+            if adapter_errors:
+                self.results_text.append("")
+                self.results_text.append("Adapter errors:")
+                for name, msg in adapter_errors.items():
+                    self.results_text.append(f"- {name}: {msg}")
+
+            report: dict[str, Any] = {
+                "metadata": {
+                    "tool": "phoneint",
+                    "version": __version__,
+                    "generated_at": utc_now_iso(),
+                },
+                "query": {
+                    "raw": number,
+                    "default_region": (region or self._settings.default_region),
+                },
+                "normalized": {
+                    "e164": normalized.e164,
+                    "international": normalized.international,
+                    "national": normalized.national,
+                    "region": normalized.region,
+                    "country_code": normalized.country_code,
+                },
+                "enrichment": {
+                    "carrier": enrichment.carrier,
+                    "region_name": enrichment.region_name,
+                    "time_zones": enrichment.time_zones,
+                    "number_type": enrichment.number_type,
+                    "iso_country_code": enrichment.iso_country_code,
+                    "dialing_prefix": enrichment.dialing_prefix,
+                },
+                "reputation": {"adapter_errors": adapter_errors},
+                "evidence": [r.to_dict() for r in evidence],
+                "owner_intel": owner_intel_final or {},
+                "owner_audit_trail": owner_audit,
+                "signals": {
+                    "found_in_scam_db": found_in_scam_db,
+                    "voip": voip,
+                    **domain_signals,
+                },
+                "score": score.to_dict(),
+                "summary": {
+                    "executive_summary": (
+                        f"Risk score {score.score}/100. "
+                        f"Matched scam dataset: {'yes' if found_in_scam_db else 'no'}. "
+                        f"Evidence items: {len(evidence)}."
+                    ),
+                    "legal_disclaimer": LEGAL_DISCLAIMER,
+                },
+            }
+
+            self._last_report = report
+            self.download_btn.setEnabled(True)
+
             self._set_busy(False)
             self.status.setText("Done.")
 
         def on_cancel(self) -> None:
             self._cancel_tasks()
             self._set_busy(False)
+
+        def on_download_report(self) -> None:
+            if self._last_report is None:
+                QMessageBox.information(self, "No report", "Run a lookup first.")
+                return
+
+            fmt = self.report_format.currentText().lower()
+            default_name = f"report.{fmt}"
+            filter_map = {
+                "json": "JSON Files (*.json)",
+                "csv": "CSV Files (*.csv)",
+                "pdf": "PDF Files (*.pdf)",
+            }
+            file_path, _ = QFileDialog.getSaveFileName(
+                self,
+                "Save report",
+                default_name,
+                filter_map.get(fmt, "All Files (*)"),
+            )
+            if not file_path:
+                return
+
+            try:
+                path = Path(file_path)
+                if fmt == "json":
+                    export_json_owner(self._last_report, path)
+                elif fmt == "csv":
+                    export_csv_owner(self._last_report, path)
+                elif fmt == "pdf":
+                    generate_pdf_owner(self._last_report, path)
+                else:
+                    raise ValueError(f"Unknown format: {fmt}")
+            except Exception as exc:
+                QMessageBox.warning(self, "Save failed", f"{type(exc).__name__}: {exc}")
+                return
+
+            QMessageBox.information(self, "Report saved", f"Saved to {file_path}")
             self.status.setText("Cancelled.")
 
         def closeEvent(self, event: Any) -> None:  # noqa: N802
