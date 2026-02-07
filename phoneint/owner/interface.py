@@ -9,6 +9,7 @@ from typing import Any, Literal, TypedDict
 
 OwnershipType = Literal["business", "individual", "voip", "unknown"]
 
+
 class LegalBasis(TypedDict, total=False):
     purpose: str
     consent_obtained: bool
@@ -25,7 +26,7 @@ class OwnerAssociation:
     snippet: str
     label: str
     timestamp: datetime
-    
+
     def to_dict(self) -> dict[str, str | None]:
         return {
             "source": self.source,
@@ -110,5 +111,4 @@ class OwnerAdapter(ABC):
         legal_basis: dict[str, Any] | None,
         limit: int = 5,
         caller: str | None = None,
-    ) -> OwnerAdapterResult:
-        ...
+    ) -> OwnerAdapterResult: ...

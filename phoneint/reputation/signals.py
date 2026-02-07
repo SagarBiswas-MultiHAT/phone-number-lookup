@@ -75,9 +75,7 @@ def apply_signal_overrides(
     return voip_signal, merged, hits
 
 
-def generate_signal_override_evidence(
-    e164: str, hits: dict[str, bool]
-) -> list[SearchResult]:
+def generate_signal_override_evidence(e164: str, hits: dict[str, bool]) -> list[SearchResult]:
     """Return synthetic evidence entries for any fired signal overrides."""
 
     entries: list[SearchResult] = []

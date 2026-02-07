@@ -14,7 +14,12 @@ from .interface import (
     OwnershipType,
     now_utc,
 )
-from .signals import OwnerIntelEngine, associations_from_evidence, extract_owner_signals, score_owner_confidence
+from .signals import (
+    OwnerIntelEngine,
+    associations_from_evidence,
+    extract_owner_signals,
+    score_owner_confidence,
+)
 from .truecaller_adapter import TruecallerAdapter
 
 __all__ = [

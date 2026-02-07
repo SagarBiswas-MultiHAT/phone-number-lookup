@@ -1,0 +1,131 @@
+{
+  "enrichment": {
+    "carrier": "",
+    "dialing_prefix": 1,
+    "iso_country_code": "US",
+    "number_type": "toll_free",
+    "region_name": "",
+    "time_zones": [
+      "America/Adak",
+      "America/Anchorage",
+      "America/Anguilla",
+      "America/Antigua",
+      "America/Barbados",
+      "America/Boise",
+      "America/Cayman",
+      "America/Chicago",
+      "America/Denver",
+      "America/Dominica",
+      "America/Edmonton",
+      "America/Fort_Nelson",
+      "America/Grand_Turk",
+      "America/Grenada",
+      "America/Halifax",
+      "America/Jamaica",
+      "America/Juneau",
+      "America/Los_Angeles",
+      "America/Lower_Princes",
+      "America/Montserrat",
+      "America/Nassau",
+      "America/New_York",
+      "America/North_Dakota/Center",
+      "America/Phoenix",
+      "America/Port_of_Spain",
+      "America/Puerto_Rico",
+      "America/Regina",
+      "America/Santo_Domingo",
+      "America/St_Johns",
+      "America/St_Kitts",
+      "America/St_Lucia",
+      "America/St_Thomas",
+      "America/St_Vincent",
+      "America/Toronto",
+      "America/Tortola",
+      "America/Vancouver",
+      "America/Winnipeg",
+      "Atlantic/Bermuda",
+      "Pacific/Guam",
+      "Pacific/Honolulu",
+      "Pacific/Pago_Pago",
+      "Pacific/Saipan"
+    ]
+  },
+  "evidence": [
+    {
+      "snippet": "Configured override flagged the business directory mention for +18005550100.",
+      "source": "signal_override",
+      "timestamp": "2026-02-07T11:51:27.300769+00:00",
+      "title": "Signal override: business directory mention",
+      "url": ""
+    }
+  ],
+  "metadata": {
+    "generated_at": "2026-02-07T11:51:27.304946+00:00",
+    "tool": "phoneint",
+    "version": "0.1.0"
+  },
+  "normalized": {
+    "country_code": 1,
+    "e164": "+18005550100",
+    "international": "+1 800-555-0100",
+    "national": "(800) 555-0100",
+    "region": "US"
+  },
+  "owner_audit_trail": [],
+  "owner_intel": {},
+  "query": {
+    "default_region": null,
+    "raw": "+18005550100"
+  },
+  "reputation": {
+    "adapter_errors": {}
+  },
+  "score": {
+    "breakdown": [
+      {
+        "contribution": 0.0,
+        "name": "found_in_scam_db",
+        "reason": "Matched a public scam dataset",
+        "value": 0.0,
+        "weight": 60.0
+      },
+      {
+        "contribution": 0.0,
+        "name": "voip",
+        "reason": "libphonenumber classified the number as VOIP",
+        "value": 0.0,
+        "weight": 15.0
+      },
+      {
+        "contribution": 0.0,
+        "name": "found_in_classifieds",
+        "reason": "Evidence URL matched a classifieds domain heuristic",
+        "value": 0.0,
+        "weight": 15.0
+      },
+      {
+        "contribution": -10.0,
+        "name": "business_listing",
+        "reason": "Evidence URL matched a business listing domain heuristic",
+        "value": 1.0,
+        "weight": -10.0
+      }
+    ],
+    "score": 0
+  },
+  "signal_overrides": {
+    "business_listing": true,
+    "found_in_classifieds": false,
+    "voip": false
+  },
+  "signals": {
+    "business_listing": true,
+    "found_in_classifieds": false,
+    "found_in_scam_db": false,
+    "voip": false
+  },
+  "summary": {
+    "executive_summary": "Risk score 0/100. Matched scam dataset: no. Evidence items: 1.",
+    "legal_disclaimer": "This tool is for lawful, ethical OSINT research only. Do not use it to harass, stalk, dox, or violate privacy. Always comply with applicable laws and Terms of Service."
+  }
+}

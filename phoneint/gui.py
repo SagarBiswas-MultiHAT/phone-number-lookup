@@ -479,7 +479,8 @@ def run_gui(settings: PhoneintSettings) -> None:
             self.results_text.append(f"- found_in_scam_db: {found_in_scam_db}")
             self.results_text.append(f"- voip: {voip}")
             self.results_text.append(
-                f"- found_in_classifieds: {domain_signals.get('found_in_classifieds')}")
+                f"- found_in_classifieds: {domain_signals.get('found_in_classifieds')}"
+            )
             self.results_text.append(
                 f"- business_listing: {domain_signals.get('business_listing')}"
             )

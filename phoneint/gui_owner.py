@@ -40,7 +40,9 @@ def create_owner_intel_panel(*, pii_capable_available: bool) -> "OwnerIntelPanel
             consent_row.addWidget(self._consent_checkbox)
 
             self._consent_status = QLabel()
-            self._consent_status.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+            self._consent_status.setAlignment(
+                Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter
+            )
             consent_row.addWidget(self._consent_status, 1)
             root.addLayout(consent_row)
 
@@ -109,7 +111,9 @@ def create_owner_intel_panel(*, pii_capable_available: bool) -> "OwnerIntelPanel
         def legal_purpose(self) -> str:
             return self._purpose_input.text().strip()
 
-        def set_owner_intel(self, owner_intel: dict[str, Any], owner_audit: list[dict[str, Any]]) -> None:
+        def set_owner_intel(
+            self, owner_intel: dict[str, Any], owner_audit: list[dict[str, Any]]
+        ) -> None:
             ownership_type = owner_intel.get("ownership_type")
             confidence = owner_intel.get("confidence_score")
             pii_allowed = owner_intel.get("pii_allowed")
