@@ -67,6 +67,7 @@ disallow_subclassing_any = true
 strict_equality = true
 show_error_codes = true
 pretty = true
+mypy_path = ["stubs"]
 
 [[tool.mypy.overrides]]
 module = [
