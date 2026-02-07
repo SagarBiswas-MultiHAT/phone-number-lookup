@@ -35,7 +35,7 @@ logger = logging.getLogger(__name__)
 
 def run_gui(settings: PhoneintSettings) -> None:
     try:
-        from PySide6.QtCore import QEvent, QTimer
+        from PySide6.QtCore import QEvent, QTimer, Qt
         from PySide6.QtGui import QGuiApplication
         from PySide6.QtWidgets import (
             QApplication,

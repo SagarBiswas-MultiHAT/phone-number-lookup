@@ -57,16 +57,19 @@ def _parse_entry(obj: dict[str, object]) -> ScamEntry:
 
 
 def load_scam_list(path: Path | None = None) -> list[ScamEntry]:
-    """
-    Load scam-list entries.
+    """Load scam-list entries, defaulting to the packaged sample dataset."""
 
-    Args:
-        path: Optional JSON path. If omitted, loads the packaged sample dataset.
-    """
-
+    data: str | None = None
     if path is not None:
-        data = path.read_text(encoding="utf-8")
-    else:
+        try:
+            if path.exists():
+                raw_text = path.read_text(encoding="utf-8")
+                if raw_text.strip():
+                    data = raw_text
+        except OSError:
+            data = None
+
+    if data is None:
         data = (
             resources.files("phoneint.data").joinpath("scam_list.json").read_text(encoding="utf-8")
         )
