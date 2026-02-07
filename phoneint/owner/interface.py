@@ -61,7 +61,7 @@ class OwnerAdapterResult:
 class OwnerAuditRecord:
     adapter: str
     time: datetime
-    legal_basis: dict[str, Any]
+    legal_basis: LegalBasis
     caller: str
     result: str
 
@@ -108,7 +108,7 @@ class OwnerAdapter(ABC):
         self,
         e164: str,
         *,
-        legal_basis: dict[str, Any] | None,
+        legal_basis: LegalBasis | None,
         limit: int = 5,
         caller: str | None = None,
     ) -> OwnerAdapterResult: ...

@@ -16,7 +16,10 @@ from __future__ import annotations
 import asyncio
 import logging
 from pathlib import Path
-from typing import Any
+from typing import Any, TYPE_CHECKING, cast
+
+if TYPE_CHECKING:
+    from PySide6.QtCore import QRect
 
 from phoneint.cache import CachedReputationAdapter, SQLiteTTLCache
 from phoneint.config import PhoneintSettings
@@ -70,7 +73,7 @@ def run_gui(settings: PhoneintSettings) -> None:
     import getpass
 
     from phoneint import __version__
-    from phoneint.gui_owner import create_owner_intel_panel
+    from phoneint.gui_owner import OwnerIntelPanelProtocol, create_owner_intel_panel
     from phoneint.io.report import utc_now_iso
     from phoneint.io.report_owner import export_csv as export_csv_owner
     from phoneint.io.report_owner import export_json as export_json_owner
@@ -92,7 +95,7 @@ def run_gui(settings: PhoneintSettings) -> None:
             self._signal_overrides = load_signal_overrides(self._settings.signal_overrides_path)
             self._tasks: set[asyncio.Task[Any]] = set()
             self._last_report: dict[str, Any] | None = None
-            self._initial_geometry = None
+            self._initial_geometry: "QRect | None" = None
             self._was_maximized = False
 
             self.setWindowTitle("phoneint (Phone Number OSINT)")
@@ -172,8 +175,11 @@ def run_gui(settings: PhoneintSettings) -> None:
             pii_capable_available = bool(
                 self._settings.enable_truecaller and self._settings.truecaller_api_key
             )
-            self.owner_panel = create_owner_intel_panel(pii_capable_available=pii_capable_available)
-            tabs.addTab(self.owner_panel, "Owner Intelligence")
+            owner_panel_widget = create_owner_intel_panel(
+                pii_capable_available=pii_capable_available
+            )
+            self.owner_panel = cast(OwnerIntelPanelProtocol, owner_panel_widget)
+            tabs.addTab(cast(QWidget, owner_panel_widget), "Owner Intelligence")
 
             panels.addWidget(tabs, 1)
             root.addLayout(panels)
@@ -323,7 +329,7 @@ def run_gui(settings: PhoneintSettings) -> None:
                     res = await adapter.check(normalized.e164, limit=5)
                     return adapter.name, res
 
-                task_map: dict[asyncio.Task[tuple[str, list[SearchResult]]], str] = {}
+                task_map: dict[asyncio.Future[tuple[str, list[SearchResult]]], str] = {}
                 for ad in adapters:
                     t = asyncio.create_task(run_one(ad))
                     self._tasks.add(t)

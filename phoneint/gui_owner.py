@@ -3,10 +3,22 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Protocol
 
 
-def create_owner_intel_panel(*, pii_capable_available: bool) -> "OwnerIntelPanel":
+class OwnerIntelPanelProtocol(Protocol):
+    def reset(self) -> None: ...
+
+    def consent_obtained(self) -> bool: ...
+
+    def legal_purpose(self) -> str: ...
+
+    def set_owner_intel(
+        self, owner_intel: dict[str, Any], owner_audit: list[dict[str, Any]]
+    ) -> None: ...
+
+
+def create_owner_intel_panel(*, pii_capable_available: bool) -> OwnerIntelPanelProtocol:
     try:
         from PySide6.QtCore import Qt
         from PySide6.QtWidgets import (
@@ -109,7 +121,7 @@ def create_owner_intel_panel(*, pii_capable_available: bool) -> "OwnerIntelPanel
             return bool(self._pii_capable_available and self._consent_checkbox.isChecked())
 
         def legal_purpose(self) -> str:
-            return self._purpose_input.text().strip()
+            return str(self._purpose_input.text()).strip()
 
         def set_owner_intel(
             self, owner_intel: dict[str, Any], owner_audit: list[dict[str, Any]]
@@ -164,4 +176,4 @@ def create_owner_intel_panel(*, pii_capable_available: bool) -> "OwnerIntelPanel
     return OwnerIntelPanel(pii_capable_available=pii_capable_available)
 
 
-__all__ = ["create_owner_intel_panel"]
+__all__ = ["OwnerIntelPanelProtocol", "create_owner_intel_panel"]

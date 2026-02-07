@@ -1,2 +1,14 @@
-row_type,source,title,label,url,snippet,timestamp,adapter,result,caller,legal_basis
-evidence,signal_override,Signal override: business directory mention,,,Configured override flagged the business directory mention for +18005550100.,2026-02-07T11:51:27.300769+00:00,,,,
+row_index,row_type,section,key,value,source,title,label,url,snippet,timestamp,adapter,result,caller,legal_basis
+1,kv,metadata,generated_at,2026-02-07T12:16:22.765490+00:00,,,,,,,,,,
+2,kv,metadata,tool,phoneint,,,,,,,,,,
+3,kv,metadata,version,0.1.0,,,,,,,,,,
+4,kv,query,default_region,,,,,,,,,,,
+5,kv,query,raw,+18005550100,,,,,,,,,,
+6,kv,normalized,country_code,1,,,,,,,,,,
+7,kv,normalized,e164,+18005550100,,,,,,,,,,
+8,kv,normalized,international,+1 800-555-0100,,,,,,,,,,
+9,kv,normalized,national,(800) 555-0100,,,,,,,,,,
+10,kv,normalized,region,US,,,,,,,,,,
+11,kv,summary,executive_summary,Risk score 0/100. Matched scam dataset: no. Evidence items: 1.,,,,,,,,,,
+12,kv,summary,legal_disclaimer,"This tool is for lawful, ethical OSINT research only. Do not use it to harass, stalk, dox, or violate privacy. Always comply with applicable laws and Terms of Service.",,,,,,,,,,
+13,evidence,evidence,,,signal_override,Signal override: business directory mention,,,Configured override flagged the business directory mention for +18005550100.,2026-02-07T12:16:22.751568+00:00,,,,
