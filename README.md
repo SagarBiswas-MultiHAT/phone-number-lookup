@@ -1,6 +1,6 @@
 # phoneint (Phone Number OSINT)
 
-[![CI](https://img.shields.io/github/actions/workflow/status/SagarBiswas-MultiHAT/Phoneint-OSINT-Toolkit/ci.yml?branch=main)](https://github.com/SagarBiswas-MultiHAT/Phoneint-OSINT-Toolkit/actions) ![Python](https://img.shields.io/badge/python-3.11%2B-blue) ![License](https://img.shields.io/github/license/SagarBiswas-MultiHAT/Phoneint-OSINT-Toolkit) ![Ruff](https://img.shields.io/badge/lint-ruff-101010) ![Last commit](https://img.shields.io/github/last-commit/SagarBiswas-MultiHAT/Phoneint-OSINT-Toolkit)
+[![CI](https://img.shields.io/github/actions/workflow/status/SagarBiswas-MultiHAT/phoneint-osint-toolkit/ci.yml?branch=main)](https://github.com/SagarBiswas-MultiHAT/phoneint-osint-toolkit/actions) ![Python](https://img.shields.io/badge/python-3.11%2B-blue) ![License](https://img.shields.io/github/license/SagarBiswas-MultiHAT/phoneint-osint-toolkit?cacheSeconds=1) ![Ruff](https://img.shields.io/badge/lint-ruff-101010) ![Last commit](https://img.shields.io/github/last-commit/SagarBiswas-MultiHAT/phoneint-osint-toolkit)
 
 `phoneint` parses and enriches phone numbers offline (via `phonenumbers`) and runs optional, pluggable async reputation checks to produce an auditable risk score and report. The goal is transparent, explainable OSINT with clear inputs, visible signals, and reproducible output.
 
